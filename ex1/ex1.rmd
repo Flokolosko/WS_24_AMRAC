@@ -33,15 +33,35 @@ test.data <- College[test,]
 ```
 
 
-creating the model
+## 1. Look first at your data. Is any preprocessing necessary or useful? Argue why a log-transformation of the response variable can be useful. Continue with log(Apps) as the response.
+
 ```{r}
-model <- lm(Apps ~ . - Accept - Enroll, data=train.data)
-summary(model)
+par(mfrow=c(2,2))
+hist(College$Apps)
+hist(log(College$Apps))
+hist(sqrt(College$Apps))
+hist(log10(College$Apps))
+```
+
+```{r}
+College$logApps <- log(College$Apps)
+```
+
+## 2. Full model: Estimate the full regression model and interpret the results.
+
+### (a) or that purpose, apply the function lm() to compute the estimator – for details see course notes. Interpret the outcome of summary(res), where res is the output from the lm() function. Which variables contribute to explaining the response variable? Look at diagnostics plots with plot(res). Are the model assumptions fulfilled?
+
+
+
+```{r}
+res <- lm(Apps ~ . - Accept - Enroll, data=train.data)
+summary(res)
+plot(res)
 ```
 
 predict the number of applications for the test data:
 ```{r}
-pred <- predict(model, newdata=test.data)
+pred <- predict(res, newdata=test.data)
 ```
 
 calculate the RMSE:
@@ -49,3 +69,48 @@ calculate the RMSE:
 rmse <- sqrt(mean((test.data$Apps - pred)^2))
 rmse
 ```
+Now we check what variables are important for the prediction:
+```{r}
+library(caret)
+varImp(res)
+```
+
+
+### (b) ow we try to manually compute the LS coefficients, in the same way as lm(). Thus, replace from the above command lm() by model.matrix(). This gives you the matrix X as it is used to estimate the regression coefficients. Now apply the formula to compute the LS estimator. You can do matrix multipli- cation in R by %*%, and the inverse of a matrix is computed with solve(). How is R handling binary variables (Private), and how can you interpret the corresponding regression coefficient? Compare the resulting coefficients with those obtained from lm(). Do you get the same result?  
+
+```{r}
+X <- model.matrix(Apps ~ . - Accept - Enroll, data=train.data)
+y <- train.data$Apps
+beta <- solve(t(X) %*% X) %*% t(X) %*% y
+beta
+```
+
+### (c) ompare graphically the observed and the predicted values of the response variable – once only for the training data, and once for the test data. What do you think about the prediction performance of your model? 
+
+```{r}
+par(mfrow=c(1,2))
+plot(train.data$Apps, predict(res), xlab="Observed", ylab="Predicted", main="Training data")
+plot(test.data$Apps, pred, xlab="Observed", ylab="Predicted", main="Test data")
+```
+
+### (d) Compute the RMSE separately for training and test data, and compare the values. What do you conclude? 
+
+```{r}
+pred.train <- predict(res, newdata=train.data)
+rmse.train <- sqrt(mean((train.data$Apps - pred.train)^2))
+rmse.train
+rmse
+```
+
+## 3. Reduced model: Exclude all input variables from the model which were not significant in 2(a), and compute the LS-estimator. 
+
+### (a) Are now all input variables significant in the model? Why is this not to be expected in general?
+
+### (b) Visualize the fit and the prediction from the new model, see 2(c).
+
+### (c) Compute the RMSE for the new model, see 2(d). What would we expect?
+
+### (d) Compare the two models with anova(). What can you conclude?
+
+
+### 4. Perform variable selection based on stepwise regression, using the function step(), see help file and course notes. Perform both, forward selection (start from the empty model) and backward selection (start from the full model). Compare the resulting models with the RMSE, and with plots of response versus predicted values. 

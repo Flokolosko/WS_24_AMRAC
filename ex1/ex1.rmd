@@ -45,6 +45,9 @@ hist(log10(College$Apps))
 
 ```{r}
 College$logApps <- log(College$Apps)
+College<-College[-c(2,3,4)]
+train.data <- College[train,]
+test.data <- College[test,]
 ```
 
 ## 2. Full model: Estimate the full regression model and interpret the results.
@@ -54,7 +57,7 @@ College$logApps <- log(College$Apps)
 
 
 ```{r}
-res <- lm(Apps ~ . - Accept - Enroll, data=train.data)
+res <- lm(logApps ~ ., data=train.data)
 summary(res)
 plot(res)
 ```
@@ -66,7 +69,7 @@ pred <- predict(res, newdata=test.data)
 
 calculate the RMSE:
 ```{r}
-rmse <- sqrt(mean((test.data$Apps - pred)^2))
+rmse <- sqrt(mean((test.data$logApps - pred)^2))
 rmse
 ```
 Now we check what variables are important for the prediction:
@@ -79,38 +82,94 @@ varImp(res)
 ### (b) ow we try to manually compute the LS coefficients, in the same way as lm(). Thus, replace from the above command lm() by model.matrix(). This gives you the matrix X as it is used to estimate the regression coefficients. Now apply the formula to compute the LS estimator. You can do matrix multipli- cation in R by %*%, and the inverse of a matrix is computed with solve(). How is R handling binary variables (Private), and how can you interpret the corresponding regression coefficient? Compare the resulting coefficients with those obtained from lm(). Do you get the same result?  
 
 ```{r}
-X <- model.matrix(Apps ~ . - Accept - Enroll, data=train.data)
-y <- train.data$Apps
+X <- model.matrix(logApps ~ . , data=train.data)
+y <- train.data$logApps
 beta <- solve(t(X) %*% X) %*% t(X) %*% y
 beta
 ```
 
-### (c) ompare graphically the observed and the predicted values of the response variable – once only for the training data, and once for the test data. What do you think about the prediction performance of your model? 
+### (c) Compare graphically the observed and the predicted values of the response variable – once only for the training data, and once for the test data. What do you think about the prediction performance of your model? 
 
 ```{r}
 par(mfrow=c(1,2))
-plot(train.data$Apps, predict(res), xlab="Observed", ylab="Predicted", main="Training data")
-plot(test.data$Apps, pred, xlab="Observed", ylab="Predicted", main="Test data")
+plot(train.data$logApps, predict(res), xlab="Observed logarithmic", ylab="Predicted", main="Training data")
+plot(test.data$logApps, pred, xlab="Observed logarithmic", ylab="Predicted", main="Test data")
 ```
 
 ### (d) Compute the RMSE separately for training and test data, and compare the values. What do you conclude? 
 
 ```{r}
 pred.train <- predict(res, newdata=train.data)
-rmse.train <- sqrt(mean((train.data$Apps - pred.train)^2))
+rmse.train <- sqrt(mean((train.data$logApps - pred.train)^2))
 rmse.train
 rmse
 ```
 
 ## 3. Reduced model: Exclude all input variables from the model which were not significant in 2(a), and compute the LS-estimator. 
+```{r}
+reduced.model<- lm(logApps ~ . -Top25perc -Top10perc -P.Undergrad -Personal -PhD -Terminal -perc.alumni, data=train.data)
+summary(reduced.model)
+```
 
 ### (a) Are now all input variables significant in the model? Why is this not to be expected in general?
-
+Yes. Various Reasons such as Overfitting, colinearity, sample size limitations, noise and bias, etc.
 ### (b) Visualize the fit and the prediction from the new model, see 2(c).
+```{r}
+par(mfrow=c(1,2))
+pred <- predict(reduced.model, newdata=test.data)
+plot(train.data$logApps, predict(reduced.model), xlab="Observed", ylab="Predicted", main="Training data")
+plot(test.data$logApps, pred, xlab="Observed logarithmic", ylab="Predicted logarithmic", main="Test data")
+```
 
 ### (c) Compute the RMSE for the new model, see 2(d). What would we expect?
+```{r}
+pred.train <- predict(reduced.model, newdata=train.data)
+rmse.train <- sqrt(mean((train.data$logApps - pred.train)^2))
+rmse.train
+rmse <- sqrt(mean((test.data$logApps - pred)^2))
+rmse
+```
 
 ### (d) Compare the two models with anova(). What can you conclude?
+```{r}
+anova(res,reduced.model)
+```
 
 
 ### 4. Perform variable selection based on stepwise regression, using the function step(), see help file and course notes. Perform both, forward selection (start from the empty model) and backward selection (start from the full model). Compare the resulting models with the RMSE, and with plots of response versus predicted values. 
+```{r}
+full_model <- lm(logApps~ .,data=train.data)
+empty_model <- lm(logApps ~ 1, data = train.data) 
+forward_model <- step(empty_model,direction = "forward",scope=full_model)
+backward_model <-step(full_model,direction = "backward")
+summary(backward_model)
+```
+
+
+```{r}
+# Function to calculate RMSE
+rmse <- function(model) {
+  predictions <- predict(model, newdata = test.data)
+  sqrt(mean((test.data$logApps - predictions)^2)) }
+rmse_forward <- rmse(forward_model)
+rmse_backward <- rmse(backward_model)
+
+print(paste("RMSE of Forward Model:", rmse_forward))
+print(paste("RMSE of Backward Model:", rmse_backward))
+```
+
+```{r}
+plot_model <- function(model, title) {
+  predictions <- predict(model, newdata = test.data)
+  ggplot(test.data, aes(x = predictions, y = logApps)) +
+    geom_point() +
+    geom_smooth(method = "lm", color = "blue") +
+    labs(title = title, x = "Predicted Values", y = "Actual Values") +
+    theme_minimal() } # Plotting both models
+plot1 <- plot_model(forward_model, "Forward Selection Model")
+plot2 <- plot_model(backward_model, "Backward Selection Model") # Print plots
+print(plot1)
+print(plot2)
+```
+
+

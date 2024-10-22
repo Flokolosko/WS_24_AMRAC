@@ -57,7 +57,7 @@ test.data <- College[test,]
 
 ## 2. Full model: Estimate the full regression model and interpret the results.
 
-### (a) or that purpose, apply the function lm() to compute the estimator – for details see course notes. Interpret the outcome of summary(res), where res is the output from the lm() function. Which variables contribute to explaining the response variable? Look at diagnostics plots with plot(res). Are the model assumptions fulfilled?
+### (a) For that purpose, apply the function lm() to compute the estimator – for details see course notes. Interpret the outcome of summary(res), where res is the output from the lm() function. Which variables contribute to explaining the response variable? Look at diagnostics plots with plot(res). Are the model assumptions fulfilled?
 
 
 
@@ -85,13 +85,29 @@ varImp(res)
 ```
 
 
-### (b) ow we try to manually compute the LS coefficients, in the same way as lm(). Thus, replace from the above command lm() by model.matrix(). This gives you the matrix X as it is used to estimate the regression coefficients. Now apply the formula to compute the LS estimator. You can do matrix multipli- cation in R by %*%, and the inverse of a matrix is computed with solve(). How is R handling binary variables (Private), and how can you interpret the corresponding regression coefficient? Compare the resulting coefficients with those obtained from lm(). Do you get the same result?  
+### (b) Now we try to manually compute the LS coefficients, in the same way as lm(). Thus, replace from the above command lm() by model.matrix(). This gives you the matrix X as it is used to estimate the regression coefficients. Now apply the formula to compute the LS estimator. You can do matrix multiplication in R by %*%, and the inverse of a matrix is computed with solve(). How is R handling binary variables (Private), and how can you interpret the corresponding regression coefficient? Compare the resulting coefficients with those obtained from lm(). Do you get the same result?  
 
 ```{r}
 X <- model.matrix(logApps ~ . , data=train.data)
 y <- train.data$logApps
 beta <- solve(t(X) %*% X) %*% t(X) %*% y
 beta
+```
+
+first 5 rows of the matrix X:
+```{r}
+head(X)
+```
+
+As we can see the binary variable is encoded as 0 and 1.
+We actually get the same results as with the lm() function.
+In the Matrix Methods, we have get
+```{r}
+beta[,1]["PrivateYes"]
+```
+And with the lm() function we get
+```{r}
+coef(res)["PrivateYes"]
 ```
 
 ### (c) Compare graphically the observed and the predicted values of the response variable – once only for the training data, and once for the test data. What do you think about the prediction performance of your model? 
@@ -101,6 +117,9 @@ par(mfrow=c(1,2))
 plot(train.data$logApps, predict(res), xlab="Observed logarithmic", ylab="Predicted", main="Training data")
 plot(test.data$logApps, pred, xlab="Observed logarithmic", ylab="Predicted", main="Test data")
 ```
+In both graphs, we can see a clear linear relationship between the observed and predicted values. 
+Since the training data has more data points, the graph is more dense but one can still see that both graphs are very similar.
+
 
 ### (d) Compute the RMSE separately for training and test data, and compare the values. What do you conclude? 
 
@@ -115,7 +134,8 @@ Since the model was fitted to the training data, i expect the RMSE of the test d
 
 ## 3. Reduced model: Exclude all input variables from the model which were not significant in 2(a), and compute the LS-estimator. 
 ```{r}
-reduced.model<- lm(logApps ~ . -Top25perc -Top10perc -P.Undergrad -Personal -PhD -Terminal -perc.alumni, data=train.data)
+reduced.model<- lm(logApps ~ .  -Top25perc -Top10perc -P.Undergrad -Personal 
+                                -PhD -Terminal -perc.alumni, data=train.data)
 summary(reduced.model)
 ```
 
@@ -125,8 +145,10 @@ Yes. Various Reasons such as Overfitting, colinearity, sample size limitations, 
 ```{r}
 par(mfrow=c(1,2))
 pred <- predict(reduced.model, newdata=test.data)
-plot(train.data$logApps, predict(reduced.model), xlab="Observed logarithmic", ylab="Predicted", main="Training data")
-plot(test.data$logApps, pred, xlab="Observed logarithmic", ylab="Predicted logarithmic", main="Test data")
+plot(train.data$logApps, predict(reduced.model), xlab="Observed logarithmic", 
+                            ylab="Predicted", main="Training data")
+plot(test.data$logApps, pred, xlab="Observed logarithmic", 
+                            ylab="Predicted logarithmic", main="Test data")
 ```
 
 ### (c) Compute the RMSE for the new model, see 2(d). What would we expect?
@@ -138,6 +160,7 @@ rmse <- sqrt(mean((test.data$logApps - pred)^2))
 cat("RMSE of reduced model",rmse)
 ```
 I expect the new model to have a higher RMSE, even though we only removed insignificant variables. However, the error is smaller since with all variables we did fit the model to the noise of the model (Overfitting)
+
 ### (d) Compare the two models with anova(). What can you conclude?
 ```{r}
 anova(res,reduced.model)

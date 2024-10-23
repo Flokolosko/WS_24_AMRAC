@@ -1,0 +1,13 @@
+---
+title: "Simple template for R Markdown"
+subtitle: "for Advanced Methods for Regression and Classification"
+author: "Prof. Peter Filzmoser"
+date: "01.10.2024"
+output: pdf_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE,warning=FALSE,message=FALSE)
+data(College,package="ISLR")
+str(College)
+```
